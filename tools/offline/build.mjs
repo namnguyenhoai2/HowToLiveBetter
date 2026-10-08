@@ -69,8 +69,9 @@ for (const [img, mime] of [['ads/mcyyy-side.webp', 'image/webp'], ['ads/wechat-r
 // Ghi ở chân trang bản sao ngoại tuyến này được tạo từ phiên bản nào.
 const foot = '<div class="foot">';
 must(foot, '页脚');
-const commitNote = COMMIT ? `，正文提交 ${COMMIT.slice(0, 7)}` : '';
-html = html.replace(foot, `${foot}离线副本，生成于 ${STAMP}（北京时间）${commitNote}；正文会继续更新，以 <a href="${SITE}">在线版</a> 为准。<br>`);
+const commitNote = COMMIT ? `, bản cập nhật nội dung ${COMMIT.slice(0, 7)}` : '';
+// html = html.replace(foot, `${foot}离线副本，生成于 ${STAMP}（北京时间）${commitNote}；正文会继续更新，以 <a href="${SITE}">在线版</a> 为准。<br>`);
+html = html.replace(foot, `${foot}Bản sao ngoại tuyến, được tạo vào ${STAMP}${commitNote}. <br /> Nội dung sẽ tiếp tục được cập nhật, vui lòng lấy <a href="${SITE}">bản trực tuyến</a> làm chuẩn.<br>`);
 
 // Dữ liệu sách phải có trước mã chính để init() có thể đọc ngay khi chạy.
 // Cho phép khoảng trắng/định dạng thay đổi quanh thẻ script; điểm neo là chú
