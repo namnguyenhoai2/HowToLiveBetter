@@ -73,9 +73,13 @@ const commitNote = COMMIT ? `，正文提交 ${COMMIT.slice(0, 7)}` : '';
 html = html.replace(foot, `${foot}离线副本，生成于 ${STAMP}（北京时间）${commitNote}；正文会继续更新，以 <a href="${SITE}">在线版</a> 为准。<br>`);
 
 // Dữ liệu sách phải có trước mã chính để init() có thể đọc ngay khi chạy.
-const mainScript = '\n<script>\n/* ---------- 调试面板';
-must(mainScript, '主脚本的开头');
-html = html.replace(mainScript, `\n<script>window.__CORPUS__=${corpusJson}</script>${mainScript}`);
+// Cho phép khoảng trắng/định dạng thay đổi quanh thẻ script; điểm neo là chú
+// thích mở đầu của script chính, không phải toàn bộ chuỗi xuống dòng cố định.
+const mainScript = /<script>\s*\/\* ---------- 调试面板/;
+if (!mainScript.test(html)) {
+  throw new Error('Không tìm thấy phần mở đầu của script chính trong index.html.');
+}
+html = html.replace(mainScript, match => `<script>window.__CORPUS__=${corpusJson}</script>${match}`);
 
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, html);

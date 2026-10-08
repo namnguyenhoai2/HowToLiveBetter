@@ -8,10 +8,10 @@ node tools/pdf/build.mjs                   # PDF，另需 pandoc ≥ 3.1 和 typ
 
 
 
-Các từ sau phải dịch đúng như sau:
-成本：Chi phí
-说人话：Nói đơn giản 
-收益：Lợi ích
-证据等级：Mức độ bằng chứng
-来源：Nguồn
-备注：Ghi chú
+Các từ sau phải dịch đúng như sau, dấu : viết liền ngay sau từ tiếng Việt
+成本：Chi phí:
+说人话：Nói đơn giản:
+收益：Lợi ích:
+证据等级：Mức độ bằng chứng:
+来源：Nguồn:
+备注：Ghi chú:
