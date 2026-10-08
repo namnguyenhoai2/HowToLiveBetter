@@ -1,7 +1,10 @@
-// 把 index.html + README + book/*.md 打成一个自包含的 HTML：双击就能看，不用服务器、不用联网。
-// 用法：node tools/offline/build.mjs [输出路径]   默认输出 dist/HowToLiveBetter.html
-// 正文内联进 window.__CORPUS__，index.html 的 init() 认这个变量就不再发请求；
-// 站内相对链接改成线上地址，侧栏图片转成 data URI，其余一个字不动。
+// Đóng gói index.html, README và book/*.md thành một HTML tự chứa: mở bằng
+// cách nhấp đúp, không cần máy chủ hay kết nối mạng.
+// Cách dùng: node tools/offline/build.mjs [đường-dẫn-đầu-ra]
+// Mặc định xuất ra dist/HowToLiveBetter.html.
+// Nội dung sách được nhúng vào window.__CORPUS__; init() trong index.html sẽ
+// dùng biến này thay vì gửi yêu cầu tải tệp. Liên kết nội bộ được đổi sang bản
+// trực tuyến, ảnh thanh bên được chuyển sang data URI; các phần khác giữ nguyên.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { ROOT, REPO, SITE, read, gitCommit, buildStamp } from '../lib/book.mjs';
@@ -10,36 +13,44 @@ const OUT = resolve(ROOT, process.argv[2] ?? 'dist/HowToLiveBetter.html');
 const STAMP = buildStamp();
 const COMMIT = gitCommit();
 
-// ---------- 正文 ----------
+// ---------- Nội dung sách ----------
 const readme = read('README.md');
+// README là danh mục chuẩn; chỉ lấy các tệp được liên kết ở đây để thứ tự nội
+// dung của bản ngoại tuyến khớp với các định dạng xuất bản khác.
 const files = [...new Set([...readme.matchAll(/\]\((book\/[^)]+\.md)\)/g)].map(m => m[1]))].sort();
 if (!files.length) throw new Error('README 目录里没找到 book/ 文件，离线版会是空的');
-// 长文（docs/*.md）也要带上：检索页的长文弹窗就地渲染它们，离线副本里没有就只剩
-// 一个点不开的 GitHub 链接。清单从 README 里扒，和 EPUB、PDF 两套构建用的是同一处。
+// Cũng kèm các bài dài (docs/*.md): hộp thoại bài dài của trang tìm kiếm hiển
+// chúng ngay trong trang. Nếu bỏ chúng, bản ngoại tuyến chỉ còn liên kết GitHub
+// không mở được. Danh sách này cũng được lấy từ README như bản EPUB và PDF.
 const docs = [...new Set([...readme.matchAll(/\]\((docs\/[^)#/]+\.md)\)/g)].map(m => m[1]))].sort();
 const corpus = {
   readme,
   parts: Object.fromEntries(files.map(f => [f, read(f)])),
   docs: Object.fromEntries(docs.map(f => [f, read(f)])),
 };
-// </script 会提前关掉脚本标签；\/ 在 JS 字符串里就是 /，内容不变
+// Chuỗi </script> sẽ đóng thẻ script sớm. Escape dấu / để dữ liệu vẫn giữ
+// nguyên khi được chèn vào thẻ script.
 const corpusJson = JSON.stringify(corpus).replace(/<\/script/gi, '<\\/script');
 
-// ---------- 页面 ----------
+// ---------- Trang HTML ----------
 let html = read('index.html');
+// Báo lỗi sớm khi cấu trúc index.html thay đổi, thay vì âm thầm tạo một tệp
+// ngoại tuyến thiếu chức năng.
 const must = (needle, label) => {
   if (!html.includes(needle)) throw new Error(`index.html 里找不到${label}，离线版脚本要跟着改：${needle}`);
 };
 
-// 统计脚本不能跟着离线版走：别人双击打开的副本不该往外发请求，断网时还要等超时
+// Không đưa mã thống kê vào bản ngoại tuyến: tệp được mở bằng nhấp đúp không
+// nên gửi yêu cầu ra ngoài hoặc chờ hết thời gian khi không có mạng.
 const GA_START = '<!-- ga:start', GA_END = '<!-- ga:end -->';
 must(GA_START, ' GA 片段的起始标记');
 must(GA_END, ' GA 片段的结束标记');
 html = html.slice(0, html.indexOf(GA_START)) + html.slice(html.indexOf(GA_END) + GA_END.length);
-// 只查外连域名：主脚本里的 track() 带 typeof 守卫，没有 gtag 也能跑，不算残留
+// Chỉ kiểm tra tên miền bên ngoài. track() trong mã chính có lớp bảo vệ typeof,
+// nên việc không có gtag không phải là mã thống kê còn sót lại.
 if (/googletagmanager|google-analytics/.test(html)) throw new Error('剥掉标记之间的内容后仍有统计域名残留，离线版会往外发请求');
 
-// 相对链接在本地打开时是死的，改成线上地址
+// Liên kết tương đối không dùng được khi mở tệp cục bộ, nên đổi chúng sang URL trực tuyến.
 must('href="README.md"', ' README.md 链接');
 must('href="book/"', ' book/ 链接');
 html = html
@@ -47,20 +58,21 @@ html = html
   .replaceAll('href="book/"', `href="${REPO}/tree/main/book"`)
   .replaceAll('<a class="title" href="./"', `<a class="title" href="${SITE}"`);
 
-// 侧栏广告图和赞赏码转 data URI，否则离线打开是个裂图
+// Chuyển ảnh quảng cáo thanh bên và mã ủng hộ thành data URI; nếu không, ảnh
+// sẽ bị vỡ khi tệp được mở ngoại tuyến.
 for (const [img, mime] of [['ads/mcyyy-side.webp', 'image/webp'], ['ads/wechat-reward.png', 'image/png']]) {
   must(`src="${img}"`, `图片 ${img}`);
   const data = readFileSync(resolve(ROOT, img)).toString('base64');
   html = html.replace(`src="${img}"`, `src="data:${mime};base64,${data}"`);
 }
 
-// 页脚注明这是哪一版的离线副本
+// Ghi ở chân trang bản sao ngoại tuyến này được tạo từ phiên bản nào.
 const foot = '<div class="foot">';
 must(foot, '页脚');
 const commitNote = COMMIT ? `，正文提交 ${COMMIT.slice(0, 7)}` : '';
 html = html.replace(foot, `${foot}离线副本，生成于 ${STAMP}（北京时间）${commitNote}；正文会继续更新，以 <a href="${SITE}">在线版</a> 为准。<br>`);
 
-// 正文要在主脚本之前就位
+// Dữ liệu sách phải có trước mã chính để init() có thể đọc ngay khi chạy.
 const mainScript = '\n<script>\n/* ---------- 调试面板';
 must(mainScript, '主脚本的开头');
 html = html.replace(mainScript, `\n<script>window.__CORPUS__=${corpusJson}</script>${mainScript}`);
