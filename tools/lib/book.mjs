@@ -39,16 +39,31 @@ export function stripBackLink(md) {
 export function readBook() {
   const readme = read('README.md');
   const lines = readme.split('\n');
-  const between = (from, to) => {
-    const a = lines.findIndex(l => l.startsWith(from));
-    const b = lines.findIndex((l, i) => i > a && l.startsWith(to));
-    if (a < 0 || b < 0) throw new Error(`README 里找不到 ${from} 到 ${to} 这一段`);
-    return lines.slice(a, b).join('\n');
-  };
-  const description = between('# 高性价比人生指南', '[![')
-    .split('\n').slice(1).map(l => l.replace(/<[^>]+>/g, '').trim()).filter(Boolean).join('');
-  const frontMd = between('## 这本书想回答的问题', '## 目录');
-  const contentsMd = between('## 目录', '## 正文')
+  const titleAt = lines.findIndex(l => /^# (?!#)/.test(l));
+  const badgesAt = lines.findIndex((l, i) => i > titleAt && l.startsWith('[!['));
+  const h2 = lines.reduce((all, line, i) => {
+    if (/^## (?!#)/.test(line)) all.push(i);
+    return all;
+  }, []);
+  if (titleAt < 0 || badgesAt < 0 || h2.length < 2) {
+    throw new Error('README 缺少标题、徽章或二级章节，无法生成电子书');
+  }
+
+  // README 可被翻译，不能依赖「目录」、「正文」等某一种语言的标题。
+  // 目录是最后一个包含 book/*.md 链接的二级章节；它后面的二级章节是「正文」说明。
+  const sectionEnd = at => h2.find(i => i > at) ?? lines.length;
+  const contentsAt = h2.filter(at =>
+    lines.slice(at, sectionEnd(at)).some(l => /\]\(book\/[^)#]+\.md\)/.test(l)),
+  ).at(-1);
+  const frontAt = h2[0];
+  if (contentsAt === undefined || contentsAt <= frontAt) {
+    throw new Error('README 里找不到包含 book/*.md 链接的目录章节');
+  }
+
+  const description = lines.slice(titleAt + 1, badgesAt)
+    .map(l => l.replace(/<[^>]+>/g, '').trim()).filter(Boolean).join('');
+  const frontMd = lines.slice(frontAt, contentsAt).join('\n');
+  const contentsMd = lines.slice(contentsAt, sectionEnd(contentsAt)).join('\n')
     .split('\n\n').filter(p => !p.includes('index.html')).join('\n\n');
   const bookFiles = unique([...contentsMd.matchAll(/\]\((book\/[^)#]+\.md)\)/g)].map(m => m[1]));
   const docFiles = unique([...readme.matchAll(/\]\((docs\/[^)#/]+\.md)\)/g)].map(m => m[1]));
