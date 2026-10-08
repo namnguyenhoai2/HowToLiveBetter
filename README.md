@@ -179,7 +179,7 @@ Các con số về tỷ lệ tử vong, thời gian và năng lượng, tiền b
 
 ## Phân cấp bằng chứng
 
-Mỗi gợi ý đều được ghi cấp độ bằng chứng:
+Mỗi gợi ý đều được ghi Mức độ bằng chứng:
 
 | Cấp độ | Ý nghĩa |
 | --- | --- |

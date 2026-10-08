@@ -1080,7 +1080,7 @@ function build(sections){
       const badges = c.querySelector('.badges');
       const add = (cls, text) => { const t=document.createElement('span'); t.className='badge '+cls; t.textContent=text; badges.appendChild(t); };
       if (e.ratio) { const t = document.createElement('span'); t.className = 'badge r' + ({'极高':'3','高':'2','一般':'1'}[e.ratio]);
-        t.textContent = 'Hiệu quả: ' + ({'极高':'Rất cao','高':'Cao','一般':'Trung bình'}[e.ratio] || e.ratio);
+        t.textContent = 'Hiệu quả ' + ({'极高':'rất cao','高':'cao','一般':'trung bình'}[e.ratio] || e.ratio);
         t.title = 'Đánh giá của tác giả: tổng hợp từ mức lợi ích (' + e.level + ') và ba loại chi phí; chỉ có thể so sánh trong cùng phạm vi (' + LENS_LABEL[e.lens] + '), không liên quan đến mức độ bằng chứng';
         badges.appendChild(t); }
       add(e.grade, `Bằng chứng mức ${e.grade}`);
@@ -1144,7 +1144,7 @@ function renderCard(card, terms, key){
   renderGain(f.gain, e.gain, terms);
   renderGain(f.note, e.note, terms);
   const nSrc = renderSrc(f.src, e.src, terms);
-  f.srcN.textContent = nSrc > 1 ? ` · ${nSrc} 条` : '';
+  f.srcN.textContent = nSrc > 1 ? ` · ${nSrc} nguồn` : '';
   const inBody = (e.title+e.human+e.cost+e.gain+e.note).toLowerCase();
   f.details.open = terms.length > 0 && terms.some(t => e.src.toLowerCase().includes(t)) && !terms.some(t => inBody.includes(t));
   card.key = key;
